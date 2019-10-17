@@ -1,4 +1,6 @@
 #include "gap_buffer.h"
+#include <iostream>
+#include <fstream>
 
 void GapBuffer::grow() {
     size_t new_size = (size + 1) * 2;
@@ -68,6 +70,17 @@ void GapBuffer::replace(const char& x) {
 		data[gap_start-1] = x;
 		right();
     }
+}
+
+void GapBuffer::write(const char* filename) {
+    std::ofstream myfile;
+    myfile.open(filename);
+    for (size_t i = 0; i < size; ++ i) {
+        if (i < gap_start || i > gap_end) {
+            myfile << data[i];
+        }
+    }
+    myfile.close();
 }
 
 

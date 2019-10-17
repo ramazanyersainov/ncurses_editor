@@ -3,6 +3,7 @@
 #include "editor.h"
 using namespace std;
 
+//to check whether a file exists
 inline bool file_exists(const char* name) {
     if (FILE *file = fopen(name, "r")) {
         fclose(file);
@@ -15,6 +16,7 @@ inline bool file_exists(const char* name) {
 int main(int argc, char** argv) 
 {
 
+    //processign the main arguments
     if (argc < 3) {
         cout << "USAGE: [file] [mode] ('r' for reading a file; 'w' for writing a new file) " << endl;
         return 1;
@@ -23,7 +25,7 @@ int main(int argc, char** argv)
     FILE* fp;
     string mode;
 
-    if ((mode = argv[2]) == "w") {
+    if ((mode = argv[2]) == "w") { 
         if (file_exists(argv[1])) {
             cout << "FILE ALREADY EXISTS" << endl;
             return 1;
@@ -42,21 +44,35 @@ int main(int argc, char** argv)
         return 1;
     }
     
-    Editor editor = Editor(fp);
+    //creting an editor object
+
+    Editor editor = Editor(fp,argv[1]);
     fclose(fp);
 
-    editor.initialize_window();
+    editor.initialize_window(); //initialize ncurses
+    WINDOW* editor_window = newwin(22,MAXCOLS,0,0);
+    WINDOW* footer_window = newwin(2,MAXCOLS,22,0);
+    scrollok(editor_window,TRUE);
+    wscrl(editor_window,5);
 
-    editor.paint(0);
+    wmove(editor_window,0,0);
     move(0,0);
-    refresh();
+
+    editor.paint(0, editor_window); //paint the initial screen
+    wmove(editor_window,0,0);
+    move(0,0);
+    editor.process_key(KEY_LEFT,editor_window,footer_window);
+    wrefresh(editor_window);
+    wrefresh(footer_window);
     int ch;
 
-    while ((ch = getch()) != KEY_F(1)){
-        editor.process_key(ch);
-        refresh();
+    while ((ch = getch()) != KEY_F(1)){ //main loop, processing the input key till F1 is pressed
+        editor.process_key(ch,editor_window,footer_window); //processing a key
+        wrefresh(editor_window);
+        wrefresh(footer_window);
     }
-    editor.uninitialize_window();
-
+    delwin(editor_window);
+    delwin(footer_window);
+    editor.uninitialize_window(); //endwin() of ncurses
     return 0;
 }
