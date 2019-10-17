@@ -1,6 +1,7 @@
 #include <ncurses.h>
 #include "gap_buffer.h"
 #include "editor.h"
+#include <fstream>
 using namespace std;
 
 //to check whether a file exists
@@ -30,7 +31,11 @@ int main(int argc, char** argv)
             cout << "FILE ALREADY EXISTS" << endl;
             return 1;
         } else {
-            fp = fopen(argv[1], "rb");
+            ofstream myfile;
+            myfile.open(argv[1]);
+            myfile << ' ';
+            myfile.close();
+            fp = fopen(argv[1],"rb");
         }
     } else if ((mode = argv[2]) == "r") {
         if (file_exists(argv[1])) {

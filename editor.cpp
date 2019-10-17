@@ -27,6 +27,14 @@ unsigned short Editor::up(unsigned short x){
                 row_length.pop();
                 return x;
             }
+        } else if (gap_buffer.get() == '\t') {
+            i += 3;
+            if (i >= MAXCOLS) {
+                if (row_length.top() < x)
+                    x = row_length.top();
+                row_length.pop();
+                return x - ( i + 1 - MAXCOLS );
+            }
         }
     }
     row_length.pop();
@@ -75,6 +83,16 @@ unsigned short Editor::down(const unsigned short& x) {
                     return x + i - MAXCOLS;
             }
         }
+        if (gap_buffer.get() == '\t') {
+            i += 3;
+            count += 3;
+            if (i >= MAXCOLS) {
+                gap_buffer.right();
+                if (newline)
+                    return count + 1;
+                return x + i - MAXCOLS + 1;
+            }
+        }
         gap_buffer.right();
         if (gap_buffer.get() == '\0')
             return x + i - MAXCOLS;
@@ -118,38 +136,112 @@ unsigned short Editor::down(const unsigned short& x) {
 }  
 
 void Editor::paint(const size_t& position, WINDOW* editor_window) {
-    
+    int y,x;
+
     for (size_t i = position; i < gap_buffer.size; ++ i) {
         if (i < gap_buffer.gap_start || i > gap_buffer.gap_end) {
-            waddch(editor_window,gap_buffer.data[i]);
+
+            if (gap_buffer.data[i] == '\t')
+                waddstr(editor_window,"    ");
+            else
+                waddch(editor_window,gap_buffer.data[i]);
+        }
+        /*
+        if (i < gap_buffer.gap_start || i > gap_buffer.gap_end) {
+
+            if (gap_buffer.data[i] == '\n' && flag){
+                //throw 20;
+                getyx(editor_window,y,x);
+                move(y-1,MAXCOLS-1);
+                wmove(editor_window,y-1,MAXCOLS-1);
+            }
+
+            if (gap_buffer.data[i] == '\t') {
+                getyx(editor_window,y,x);
+                if (x > MAXCOLS - 4) {
+                    flag = true;
+                    waddnstr(editor_window,"    ",MAXCOLS - x);
+                }
+                else {
+                    flag = false;
+                    waddstr(editor_window,"    ");
+                }
+            }
+            else
+                flag = false;
+                waddch(editor_window,gap_buffer.data[i]);
+        }
+        */
+    }
+    
+    getyx(editor_window,y,x);
+    for (int i = 0; i < MAXCOLS - x; ++ i)
+        wdelch(editor_window);
+    if (y < 21) {
+        move(y + 1,0);
+        wmove(editor_window,y + 1,0);
+        for (int i = 0; i < MAXCOLS; ++ i) {
+            wdelch(editor_window);
         }
     }
-    wdelch(editor_window);
+
     
 }  
 
 void Editor::process_key(const int& ch, WINDOW* editor_window, WINDOW* footer_window) {
     switch (ch) {
+        case 9: //tab
+            gap_buffer.left();
+            gap_buffer.insert(ch);
+            gap_buffer.right();
+            if (x > MAXCOLS - 5) {
+                row_length.push(79);
+                x = x - MAXCOLS + 4;
+                y ++;
+            } else {
+                x += 4;
+            }
+            paint( point ++ ,editor_window);
+            break;
         case 127: //backspace
+
             if (x == 0 && y == 0)
                 break;
+
             gap_buffer.left();
-            gap_buffer.del();
-            gap_buffer.right();
-            if (x == 0 && y > 0) {
+
+            if (gap_buffer.get() == '\t') {
+                if (x > 3) {
+                    x -= 4;
+                    wmove(editor_window,y,x);
+                    move(y,x);
+                    paint(point --,editor_window);
+                } else {
+                    int len = row_length.top();
+                    row_length.pop();
+                    y --;
+                    x = len - (3 - x);
+                    wmove(editor_window,y,x);
+                    move(y,x);
+                    paint(point --,editor_window);
+                }
+            } else if (x == 0 && y > 0) {
                 int len = row_length.top();
                 row_length.pop();
                 y --;
                 x = len;
                 wmove(editor_window,y,x);
                 move(y,x);
-                paint(--point,editor_window);
+                paint(point --,editor_window);
             } else {
                 x --;
                 wmove(editor_window,y,x);
                 move(y,x);
-                paint(--point,editor_window);
+                paint(point --,editor_window);
             }
+
+            gap_buffer.del();
+            gap_buffer.right();
             break;
         case KEY_F(3): //save
             save(filename);
@@ -199,14 +291,14 @@ void Editor::process_key(const int& ch, WINDOW* editor_window, WINDOW* footer_wi
             if (y > 0) {
                 x = up(x);
                 point = gap_buffer.start_point();
-                y -= 1;
+                y --;
             }
             break;
         case KEY_DOWN:
             if (y < 21 && !isLastRow(point)) {
                 x = down(x);
                 point = gap_buffer.start_point();
-                y += 1;
+                y ++;
             }
             break;
         case KEY_RIGHT:
@@ -242,8 +334,26 @@ void Editor::process_key(const int& ch, WINDOW* editor_window, WINDOW* footer_wi
                 }   
             }
             */
+
+
             if (gap_buffer.end_point() == gap_buffer.get_size() + 1)
                     break;
+
+            if (gap_buffer.get() == '\t') {
+                if (x > MAXCOLS - 5) {
+                    if (y == 21)
+                        break;
+                    gap_buffer.right();
+                    row_length.push(x);
+                    y ++;
+                    x = x - MAXCOLS + 4;
+                } else {
+                    gap_buffer.right();
+                    x += 4;
+                    point ++;
+                }
+                break;
+            }  
 
             if (x < MAXCOLS - 1) {
 
@@ -265,6 +375,7 @@ void Editor::process_key(const int& ch, WINDOW* editor_window, WINDOW* footer_wi
             } else {
                 if (y == 21)
                     break;
+
                 row_length.push(x);
                 gap_buffer.right();
                 point++;
@@ -275,19 +386,36 @@ void Editor::process_key(const int& ch, WINDOW* editor_window, WINDOW* footer_wi
 
             break;
         case KEY_LEFT:
+
             if (x > 0) {
-                x -= 1;
-                point --;
                 gap_buffer.left();
+                if (gap_buffer.get() == '\t') {
+                    if (x > 3) {
+                        x -= 4;
+                        point--;
+                    } else if (y > 0) {
+                        y --;
+                        x = row_length.top() - (3 - x);
+                        row_length.pop();
+                        point--;
+                    }
+                } else {
+                    x -= 1;
+                    point --;
+                }  
+                
             } else if (y > 0) {
-                x = row_length.top();
+                gap_buffer.left();
+                if (gap_buffer.get() == '\t' && x < 4)
+                    x = row_length.top() - (3 - x);
+                else
+                    x = row_length.top();
                 //if (x != MAXCOLS - 1) {
                     //point --;
                     //gap_buffer.left();
                 //}
-                gap_buffer.left();
                 point --;
-                y -= 1;
+                y --;
                 row_length.pop();
             }
             break;
