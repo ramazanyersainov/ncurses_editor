@@ -1,10 +1,9 @@
 #pragma once
 #include <stdio.h>
+#include <iostream>
 
 class GapBuffer {
-private:
-
-    friend class Editor; //giving access to the Editor class
+protected:
 
     char* data; //data array
 
@@ -20,7 +19,7 @@ public:
 
     GapBuffer(); //default constructor
 
-    GapBuffer(FILE* f); //constructor from input files
+    GapBuffer(std::string str); //constructor from input files
 
     ~GapBuffer() { delete[] data; } //deconstructor, deallocating data array
 
@@ -42,6 +41,6 @@ public:
 
     size_t get_size() { return size; } //get the size
 
-    void write(const char* filename);
+    void write(const std::string& filename);
 
 };

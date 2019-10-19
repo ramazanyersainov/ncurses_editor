@@ -3,17 +3,16 @@
 #include <fstream>
 
 void GapBuffer::grow() {
-    size_t new_size = (size + 1) * 2;
+    size_t new_size = (size) * 2;
     char* b = new char[ new_size ];
 
     for (size_t i = 0; i < gap_start; ++ i)
         b[i] = data[i];
 
-    for (size_t i = 0; i < size - gap_end; ++ i)
-        b[i + new_size - (size - gap_end)] = data[gap_end + 1 + i];
-    gap_end = new_size - (size - gap_end) - 1;
+    for (size_t i = 0; i < size - gap_end - 1; ++ i)
+        b[i + new_size - (size - gap_end) + 1] = data[gap_end + 1 + i];
+    gap_end = new_size - (size - gap_end) ;
     size = new_size;
-
     char* temp = data;
     data = b;
     delete[] temp;
@@ -25,8 +24,9 @@ GapBuffer::GapBuffer() : gap_start(0), gap_end(19), size(20)
     data[20] = '\0';
 }
 
-GapBuffer::GapBuffer(FILE* f) : gap_start(0), gap_end(19)
+GapBuffer::GapBuffer(std::string str) : gap_start(0), gap_end(19)
 {
+    FILE* f = fopen(str.c_str(), "rb");
     fseek(f, 0, SEEK_END);
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -35,6 +35,7 @@ GapBuffer::GapBuffer(FILE* f) : gap_start(0), gap_end(19)
     fread(point, fsize, 1, f);
     point[fsize] = '\0';
     size = fsize + 20;
+    fclose(f);
 }
 
 void GapBuffer::right() {
@@ -72,7 +73,7 @@ void GapBuffer::replace(const char& x) {
     }
 }
 
-void GapBuffer::write(const char* filename) {
+void GapBuffer::write(const std::string& filename) {
     std::ofstream myfile;
     myfile.open(filename);
     for (size_t i = 0; i < size; ++ i) {

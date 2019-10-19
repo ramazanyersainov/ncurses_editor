@@ -1,29 +1,20 @@
+#include <iostream>
 #include <ncurses.h>
-#include "gap_buffer.h"
-#include "editor.h"
-#include <fstream>
+#include "editor_model.h"
+#include "editor_view.h"
+#include "editor_controller.h"
 using namespace std;
 
-//to check whether a file exists
-inline bool file_exists(const char* name) {
-    if (FILE *file = fopen(name, "r")) {
-        fclose(file);
-        return true;
-    } else {
-        return false; 
-    }
-}
+inline bool file_exists(const char* name);
 
-int main(int argc, char** argv) 
-{
+int main(int argc, char** argv) {
 
-    //processign the main arguments
+	//processing the main arguments
     if (argc < 3) {
         cout << "USAGE: [file] [mode] ('r' for reading a file; 'w' for writing a new file) " << endl;
         return 1;
     }
 
-    FILE* fp;
     string mode;
 
     if ((mode = argv[2]) == "w") { 
@@ -35,12 +26,9 @@ int main(int argc, char** argv)
             myfile.open(argv[1]);
             myfile << ' ';
             myfile.close();
-            fp = fopen(argv[1],"rb");
         }
     } else if ((mode = argv[2]) == "r") {
-        if (file_exists(argv[1])) {
-            fp = fopen(argv[1],"rb");
-        } else {
+        if (!file_exists(argv[1])) {
             cout << "FILE DOES NOT EXIST" << endl;
             return 1;
         }
@@ -48,36 +36,30 @@ int main(int argc, char** argv)
         cout << "WRONG MODE" << endl;
         return 1;
     }
-    
-    //creting an editor object
 
-    Editor editor = Editor(fp,argv[1]);
-    fclose(fp);
+    string filename = argv[1];
 
-    editor.initialize_window(); //initialize ncurses
-    WINDOW* editor_window = newwin(22,MAXCOLS,0,0);
-    WINDOW* footer_window = newwin(2,MAXCOLS,22,0);
-    scrollok(editor_window,TRUE);
-    wscrl(editor_window,5);
+	EditorView view;
+	set_subwindows(view);
+	EditorModel model(filename);
+	view.paint(model,0);
+	view.refresh_all();
 
-    wmove(editor_window,0,0);
-    move(0,0);
+	EditorController controller(view,model);
 
-    editor.paint(0, editor_window); //paint the initial screen
-    wmove(editor_window,0,0);
-    move(0,0);
-    editor.process_key(KEY_LEFT,editor_window,footer_window);
-    wrefresh(editor_window);
-    wrefresh(footer_window);
-    int ch;
-
-    while ((ch = getch()) != KEY_F(1)){ //main loop, processing the input key till F1 is pressed
-        editor.process_key(ch,editor_window,footer_window); //processing a key
-        wrefresh(editor_window);
-        wrefresh(footer_window);
+	int ch;
+    while ((ch = getch()) != KEY_F(1)){
+        controller.process_key(ch);
     }
-    delwin(editor_window);
-    delwin(footer_window);
-    editor.uninitialize_window(); //endwin() of ncurses
-    return 0;
+
+	return 0;
+}
+
+inline bool file_exists(const char* name) {
+    if (FILE *file = fopen(name, "r")) {
+        fclose(file);
+        return true;
+    } else {
+        return false; 
+    }
 }
