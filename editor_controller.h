@@ -33,6 +33,10 @@ public:
 
 	std::pair<short,short> key_down();
 
+	void key_home();
+
+	void key_end();
+
 	void process_key(const int& ch);
 
 };

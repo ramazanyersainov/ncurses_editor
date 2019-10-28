@@ -1,2 +1,2 @@
 # ncurses_editor
-ncurses text editor<br>requires ncurses installed<br>to be added: scroll
+simple ncurses text editor<br>uses gap buffer data structure<br>requires ncurses installed<br>

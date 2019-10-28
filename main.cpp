@@ -46,7 +46,6 @@ int main(int argc, char** argv) {
 	view.refresh_all();
 
 	EditorController controller(view,model);
-
 	int ch;
     while ((ch = getch()) != KEY_F(1)){
         controller.process_key(ch);

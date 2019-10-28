@@ -7,6 +7,11 @@ std::pair<short,short> EditorController::key_insert(const int& ch) {
     model.insert(ch);
     model.right();
     if (view.x == MAXCOLS - 1) {
+        if (y == WINDOWROWS) {
+            view.scroll_window(1);
+            wmove(view.editor_window,y-1,x);
+            y --;
+        }
         model.row_length.push(x);
         x = 0;
         y ++;
@@ -20,6 +25,15 @@ std::pair<short,short> EditorController::key_enter() {
 	short x = view.x;
 	short y = view.y;
     model.row_length.push(x);
+    if (y == WINDOWROWS) {
+        view.scroll_window(1);
+        wmove(view.editor_window,y-1,x);
+        model.left();
+        model.insert('\n');
+        model.right();
+        x = 0;
+        return std::pair<int,int>(y,x);        
+    }
     if (model.get() != '\n') {
         model.left();
         model.insert('\n');
@@ -38,19 +52,39 @@ std::pair<short,short> EditorController::key_backspace() {
         if (x > 3) {
             x -= 4;
         } else {
+
             int len = model.row_length.top();
             model.row_length.pop();
-            y --;
             x = len - (3 - x);
+            if (y == 0) {
+                view.scroll_window(-1);
+                wmove(view.editor_window,0,0);
+                move(0,0);
+                view.paint(model, model.start_point() - x);
+                wmove(view.editor_window,0 ,x);
+                move(0,x);
+            } else {
+                y --;
+            }
         }
     } else if (x == 0 && y > 0) {
         int len = model.row_length.top();
         model.row_length.pop();
-        y --;
         x = len;
-    } else {
-        x --;
+        y --;
 
+    } else if (x == 0 && y == 0 && !model.row_length.empty()) {
+        int len = model.row_length.top();
+        model.row_length.pop();
+        x = len;
+        view.scroll_window(-1);
+        wmove(view.editor_window,0,0);
+        move(0,0);
+        view.paint(model, model.start_point() - x);
+        wmove(view.editor_window,0 ,x);
+        move(0,x);
+    } else if (x > 0) {
+        x --;
     }
     model.del();
     model.right();
@@ -64,9 +98,15 @@ std::pair<short,short> EditorController::key_tab(const int& ch) {
     model.insert(ch);
     model.right();
     if (x > MAXCOLS - 5) {
-        model.row_length.push(79);
+        model.row_length.push(MAXCOLS - 1);
         x = x - MAXCOLS + 4;
-        y ++;
+        if (y == WINDOWROWS) {
+            view.scroll_window(1);
+            wmove(view.editor_window,y,x);
+            view.paint(model, model.start_point() - 1);
+        } else {
+            y ++;
+        }
     } else {
         x += 4;
     }
@@ -92,11 +132,26 @@ std::pair<short,short> EditorController::key_left()  {
         
     } else if (y > 0) {
         model.left();
-        if (model.get() == '\t' && x < 4)
+        if (model.get() == '\t' && x < 4) {
             x = model.row_length.top() - (3 - x);
-        else
+        } else {
             x = model.row_length.top();
+        }
         y --;
+        model.row_length.pop();
+    } else if (!model.row_length.empty()) {
+        model.left();
+        if (model.get() == '\t' && x < 4) {
+            x = model.row_length.top() - (3 - x);
+        } else {
+            x = model.row_length.top();
+        }
+        view.scroll_window(-1);
+        wmove(view.editor_window,0,0);
+        move(0,0);
+        view.paint(model, model.start_point() - x);
+        wmove(view.editor_window,0 ,x);
+        move(0,x);
         model.row_length.pop();
     }
     return std::pair<int,int>(y,x);
@@ -105,13 +160,18 @@ std::pair<short,short> EditorController::key_left()  {
 std::pair<short,short> EditorController::key_right()  {
 	short x = view.x;
 	short y = view.y;
-    if (model.get() == '\0' )
+    if (model.get() == '\0' ) {
             return std::pair<int,int>(y,x);
-
+    }
     if (model.get() == '\t') {
         if (x > MAXCOLS - 5) {
-            if (y == 21)
-            	return std::pair<int,int>(y,x);
+            if (y == WINDOWROWS) {
+                view.scroll_window(1);
+                wmove(view.editor_window,y-1,x);
+                view.paint(model, model.start_point() - 1);
+                x = 0;
+                return std::pair<int,int>(y,x);
+            }
             model.right();
             model.row_length.push(x);
             y ++;
@@ -126,10 +186,15 @@ std::pair<short,short> EditorController::key_right()  {
     if (x < MAXCOLS - 1) {
 
         if (model.get() == '\n') {
-            if (y == 21)
-        		return std::pair<int,int>(y,x);
             model.row_length.push(x);
             model.right();
+            if (y == WINDOWROWS) {
+                view.scroll_window(1);
+                wmove(view.editor_window,y-1,x);
+                view.paint(model, model.start_point() - 1);
+                x = 0;
+                return std::pair<int,int>(y,x);
+            }
             x = 0;
             y ++;
         } else {
@@ -138,13 +203,20 @@ std::pair<short,short> EditorController::key_right()  {
         }  
 
     } else {
-        if (y == 21)
-            return std::pair<int,int>(y,x);
         model.row_length.push(x);
         model.right();
-        x = 0;
-        y += 1;
-        return std::pair<int,int>(y,x);
+
+        if (y == WINDOWROWS){
+            view.scroll_window(1);
+            wmove(view.editor_window,y-1,x);
+            view.paint(model, model.start_point() - 1);
+            x = 0;
+            return std::pair<int,int>(y,x);
+        } else {
+            x = 0;
+            y += 1;
+            return std::pair<int,int>(y,x);
+        }
     }
 
     return std::pair<int,int>(y,x);
@@ -153,28 +225,39 @@ std::pair<short,short> EditorController::key_right()  {
 std::pair<short,short> EditorController::key_up() {
 	short x = view.x;
 	short y = view.y;
-    if (y <= 0) {
+    if (y == 0 && model.row_length.empty()) {
 		return std::pair<int,int>(y,x);
     }
     y --;
     for (unsigned short i = 0; i < MAXCOLS; ++ i) {
         model.left();
+
         if (model.get() == '\n') {
             i += (MAXCOLS - model.row_length.top() - 1);
             if (i >= MAXCOLS) {
                 x = model.row_length.top();
-                model.row_length.pop();
-                return std::pair<int,int>(y,x);
+                break;
             }
         } else if (model.get() == '\t') {
             i += 3;
             if (i >= MAXCOLS) {
                 if (model.row_length.top() < x)
                     x = model.row_length.top();
-                model.row_length.pop();
-                return std::pair<int,int>(y, x - ( i + 1 - MAXCOLS ));
+                x = x - ( i + 1 - MAXCOLS );
+                break;
             }
         }
+    }
+
+    if (y == -1 && !model.row_length.empty()) {
+        y ++ ;
+
+        view.scroll_window(-1);
+        wmove(view.editor_window,0,0);
+        move(0,0);
+        view.paint(model, model.start_point() - x);
+        wmove(view.editor_window, 0 ,x);
+
     }
     model.row_length.pop();
     return std::pair<int,int>(y,x);
@@ -184,18 +267,26 @@ std::pair<short,short> EditorController::key_down()  {
 	short x = view.x;
 	short y = view.y;
     bool newline = false;
-    if (y >= 21 || view.isLastRow(model,model.start_point())) {
-		return std::pair<short,short>(y,x);
+    if (view.is_last_row(model,model.start_point())) {
+        return std::pair<int,int>(y,x);
     }
+
     y ++;
     model.row_length.push(MAXCOLS - 1);
     unsigned short count = 0;
 
     for (unsigned short i = 0; i < MAXCOLS; ++ i) {
 
-        if (model.end_point() == model.get_size())
-            return std::pair<short,short>(y, x + i - MAXCOLS);
+        if (y == WINDOWROWS + 1) {
+            view.scroll_window(1);
+            wmove(view.editor_window,y-2,x);
+            view.paint(model, model.start_point() - i);
+            y--;
+        }
 
+        if (model.end_point() == model.get_size()) {
+            return std::pair<short,short>(y, x + i - MAXCOLS);
+        }
         if (model.get() == '\n') {
             if (x + i < MAXCOLS) {
                 model.row_length.top() =  x + i ; 
@@ -215,18 +306,37 @@ std::pair<short,short> EditorController::key_down()  {
             count += 3;
             if (i >= MAXCOLS) {
                 model.right();
-                if (newline)
+                if (newline) {
                     return std::pair<short,short>(y, count + 1);
+                }
                 return std::pair<short,short>(y, x + i - MAXCOLS + 1);
             }
         }
         model.right();
-        if (model.get() == '\0')
+        if (model.get() == '\0') {
+            model.left();
             return std::pair<short,short>(y, x + i - MAXCOLS);
-
+        }
         count ++;
     }
 	return std::pair<short,short>(y,x);
+}
+
+void EditorController::key_end() {
+    short y = view.y;
+    for (short i = view.x + 1; i < MAXCOLS; ++ i) {
+        if (view.y > y){
+            process_key(KEY_LEFT);
+            break;
+        }
+        process_key(KEY_RIGHT);
+    }
+}
+
+void EditorController::key_home() {
+    while (view.x != 0) {
+        process_key(KEY_LEFT);
+    }
 }
 
 void EditorController::process_key(const int& ch) {
@@ -235,16 +345,12 @@ void EditorController::process_key(const int& ch) {
         case 9: //tab
         	pair = key_tab(ch);
         	view.set_yx(pair);
-
             view.paint(model, model.start_point() - 1);
             break;
         case 127: //backspace
-            if (view.x == 0 && view.y == 0)
-                break;
 			pair = key_backspace();
         	view.set_yx(pair);
             view.move_cursor();
-
             view.paint(model, model.start_point());
             break;
         case KEY_F(3): //save
@@ -255,8 +361,13 @@ void EditorController::process_key(const int& ch) {
         	pair = key_enter();
         	view.set_yx(pair);
             view.move_cursor();
-
             view.paint(model, model.start_point());
+            break;
+        case KEY_HOME:
+            key_home();
+            break;
+        case KEY_END:
+            key_end();
             break;
         case KEY_UP:
         	pair = key_up();
@@ -278,7 +389,6 @@ void EditorController::process_key(const int& ch) {
         	int point = model.start_point();
         	pair = key_insert(ch);
         	view.set_yx(pair);
-
             view.paint(model, point);
             break;
     }

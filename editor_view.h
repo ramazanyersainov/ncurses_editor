@@ -6,6 +6,7 @@
 
 #define MAXCOLS 80
 #define MAXROWS 80
+#define WINDOWROWS 21
 
 class EditorView {
 public:
@@ -41,7 +42,7 @@ public:
 
 	void move_cursor();
 
-	bool isLastRow (EditorModel& model, const size_t& position);
+	bool is_last_row (EditorModel& model, const size_t& position);
 
 	void draw_footer(EditorModel& model);
 
@@ -49,6 +50,8 @@ public:
 
 	void set_yx(std::pair<short,short>& pair);
 
+	void scroll_window(const int& n);
+	
 };
 
 void set_subwindows(EditorView& view);
