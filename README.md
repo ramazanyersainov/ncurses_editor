@@ -4,5 +4,11 @@ Terminal-style text editor that supports reading/writing text files. Implements 
 
 ### Prerequisites
 
-C++14 or higher
-lncurses library
+* C++14 or higher
+* lncurses library
+
+### Usage
+
+```
+USAGE: [file] [mode] ('r' for reading a file; 'w' for writing a new file)
+```
